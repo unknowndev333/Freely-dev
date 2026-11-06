@@ -1,4 +1,4 @@
-TITLE       := FREELY
+TITLE       := Freely Dev
 VERSION     := 1.00
 TITLE_ID    := FREY00001
 CONTENT_ID  := IV0000-FREY00001_00-FREELYDEV0000001
@@ -8,6 +8,8 @@ PROJDIR     := $(shell basename $(CURDIR))
 INTDIR      := $(PROJDIR)/x64/Debug
 SOURCE      := $(PROJDIR)/main.cpp
 OBJECT      := $(INTDIR)/main.o
+COMMONDIR   := $(TOOLCHAIN)/samples/_common
+COMMON_OBJ  := $(INTDIR)/graphics.o
 PKGTOOL     := $(TOOLCHAIN)/bin/linux/PkgTool.Core
 FSELF       := $(TOOLCHAIN)/bin/linux/create-fself
 GP4TOOL     := $(TOOLCHAIN)/bin/linux/create-gp4
@@ -15,8 +17,8 @@ GP4TOOL     := $(TOOLCHAIN)/bin/linux/create-gp4
 CCX         := clang++
 LD          := ld.lld
 
-CXXFLAGS    := --target=x86_64-pc-freebsd12-elf -fPIC -funwind-tables -c -isysroot $(TOOLCHAIN) -isystem $(TOOLCHAIN)/include -isystem $(TOOLCHAIN)/include/c++/v1
-LDFLAGS     := -m elf_x86_64 -pie --script $(TOOLCHAIN)/link.x --eh-frame-hdr -L$(TOOLCHAIN)/lib -lc -lkernel -lc++ $(TOOLCHAIN)/lib/crt1.o
+CXXFLAGS    := --target=x86_64-pc-freebsd12-elf -fPIC -funwind-tables -c -isysroot $(TOOLCHAIN) -isystem $(TOOLCHAIN)/include -isystem $(TOOLCHAIN)/include/c++/v1 -I$(COMMONDIR)
+LDFLAGS     := -m elf_x86_64 -pie --script $(TOOLCHAIN)/link.x --eh-frame-hdr -L$(TOOLCHAIN)/lib -lc -lkernel -lc++ -lSceVideoOut $(TOOLCHAIN)/lib/crt1.o
 
 .PHONY: all clean
 all: $(CONTENT_ID).pkg
@@ -24,13 +26,14 @@ all: $(CONTENT_ID).pkg
 $(INTDIR):
 	mkdir -p $(INTDIR)
 
-$(OBJECT): $(SOURCE) | $(INTDIR)
+$(OBJECT): $(SOURCE) $(COMMONDIR)/graphics.h | $(INTDIR)
 	$(CCX) $(CXXFLAGS) -o $@ $<
 
-# create-fself writes the final fake SELF to the path supplied to --eboot.
-# --out is only the intermediate OELF and must not be packaged as eboot.bin.
-eboot.bin: $(OBJECT)
-	$(LD) $(OBJECT) -o $(INTDIR)/freely.elf $(LDFLAGS)
+$(COMMON_OBJ): $(COMMONDIR)/graphics.cpp $(COMMONDIR)/graphics.h | $(INTDIR)
+	$(CCX) $(CXXFLAGS) -o $@ $<
+
+eboot.bin: $(OBJECT) $(COMMON_OBJ)
+	$(LD) $(OBJECT) $(COMMON_OBJ) -o $(INTDIR)/freely.elf $(LDFLAGS)
 	$(FSELF) --in=$(INTDIR)/freely.elf --out=$(INTDIR)/freely.oelf --eboot "$@" --paid 0x3800000000000011
 	test -s "$@"
 
