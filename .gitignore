@@ -1,0 +1,8 @@
+freely/x64/
+freely/*.pkg
+freely/*.elf
+freely/*.oelf
+freely/*.bin
+freely/pkg.gp4
+freely/sce_sys/param.sfo
+*.log
