@@ -63,4 +63,4 @@ $(CONTENT_ID).pkg: pkg.gp4
 	$(PKGTOOL) pkg_listentries $@
 
 clean:
-	rm -rf $(INTDIR) eboot.bin pkg.gp4 $(CONTENT_ID).pkg sce_sys/param.sfo sce_sys/icon0.png
+	rm -rf $(INTDIR) eboot.bin pkg.gp4 $(CONTENT_ID).pkg sce_sys/param.sfo
