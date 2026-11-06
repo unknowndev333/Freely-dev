@@ -9,6 +9,20 @@ static const int SCREEN_W = 1920;
 static const int SCREEN_H = 1080;
 static FILE *g_log = NULL;
 static unsigned int g_log_count = 0;
+struct RGB { uint8_t r, g, b; };
+static const RGB BG = {7, 9, 14};
+static const RGB PANEL = {15, 19, 28};
+static const RGB PANEL2 = {20, 25, 36};
+static const RGB WHITE = {239, 243, 250};
+static const RGB MUTED = {135, 148, 166};
+static const RGB GREEN = {102, 235, 176};
+static const RGB YELLOW = {255, 204, 102};
+static const RGB BLUE = {80, 190, 255};
+static const RGB CYAN = {70, 235, 245};
+static const RGB PURPLE = {190, 130, 255};
+static const RGB RED = {255, 105, 125};
+static const RGB DIM = {65, 82, 105};
+
 struct LogEntry { char level[12]; char message[220]; };
 static LogEntry g_entries[38];
 static unsigned int g_entry_count = 0;
@@ -23,21 +37,6 @@ static RGB level_color(const char *level) {
     if (!strcmp(level,"CHECK") || !strcmp(level,"INFO") || !strcmp(level,"SCAN")) return CYAN;
     return MUTED;
 }
-
-
-struct RGB { uint8_t r, g, b; };
-static const RGB BG = {7, 9, 14};
-static const RGB PANEL = {15, 19, 28};
-static const RGB PANEL2 = {20, 25, 36};
-static const RGB WHITE = {239, 243, 250};
-static const RGB MUTED = {135, 148, 166};
-static const RGB GREEN = {102, 235, 176};
-static const RGB YELLOW = {255, 204, 102};
-static const RGB BLUE = {80, 190, 255};
-static const RGB CYAN = {70, 235, 245};
-static const RGB PURPLE = {190, 130, 255};
-static const RGB RED = {255, 105, 125};
-static const RGB DIM = {65, 82, 105};
 
 static const char *FONT_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:-./_?";
 static const uint8_t FONT[][5] = {
@@ -86,63 +85,60 @@ static void text(Scene2D *s, int x, int y, const char *value, int scale, RGB col
 }
 static void log_line(const char *level, const char *message) {
     ++g_log_count;
-    unsigned int slot = (g_entry_count < 38) ? g_entry_count++ : 37;
-    if (g_entry_count == 38 && slot == 37) {
+    unsigned int slot;
+    if (g_entry_count < 38) slot = g_entry_count++;
+    else {
         for (int i=0; i<37; ++i) g_entries[i] = g_entries[i+1];
+        slot = 37;
     }
     strncpy(g_entries[slot].level, level, sizeof(g_entries[slot].level)-1);
     g_entries[slot].level[sizeof(g_entries[slot].level)-1] = 0;
     strncpy(g_entries[slot].message, message, sizeof(g_entries[slot].message)-1);
     g_entries[slot].message[sizeof(g_entries[slot].message)-1] = 0;
     printf("[%04u] [%s] %s\\n", g_log_count, level, message);
-    if (g_log) {
-        fprintf(g_log, "[%04u] [%s] %s\\n", g_log_count, level, message);
-        fflush(g_log);
-    }
-    if (g_report) {
-        fprintf(g_report, "[%04u] [%s] %s\\n", g_log_count, level, message);
-        fflush(g_report);
+    if (g_log) { fprintf(g_log, "[%04u] [%s] %s\\n", g_log_count, level, message); fflush(g_log); }
+    if (g_report) { fprintf(g_report, "[%04u] [%s] %s\\n", g_log_count, level, message); fflush(g_report); }
+}
+static void draw_terminal(Scene2D *s) {
+    rect(s,0,0,SCREEN_W,SCREEN_H,{3,5,9});
+    text(s,48,28,"FREELY DEV",4,CYAN);
+    text(s,48,78,"PS4 READ-ONLY DIAGNOSTIC LOG",2,DIM);
+    rect(s,48,108,1824,2,{25,44,60});
+    for (unsigned int i=0; i<g_entry_count; ++i) {
+        int y = 132 + (int)i*24;
+        char number[16];
+        snprintf(number,sizeof(number),"[%04u]",g_log_count-g_entry_count+i+1);
+        text(s,52,y,number,2,DIM);
+        text(s,132,y,"[",2,DIM);
+        text(s,144,y,g_entries[i].level,2,level_color(g_entries[i].level));
+        text(s,228,y,"]",2,DIM);
+        text(s,248,y,g_entries[i].message,2,WHITE);
     }
 }
-int main(void) {
-    setvbuf(stdout, NULL, _IONBF, 0);
-    log_line("INFO","Freely Dev boot sequence started.");
-
-    g_log = fopen("/data/FREELY-DEV.log","a");
-    if (g_log) log_line("OK","Opened /data/FREELY-DEV.log.");
-    else log_line("WARN","File logging unavailable; screen diagnostics remain active.");
-
-    log_line("INFO","Initializing PS4 video output.");
-    Scene2D scene(SCREEN_W,SCREEN_H,4);
-    if (!scene.Init(0x02000000,2)) {
-        log_line("ERROR","Video output initialization failed.");
-        for (;;) sceKernelUsleep(1000000);
-    }
-
-    scene.SetActiveFrameBuffer(0);
-    draw_terminal(&scene,g_log != NULL);
-    scene.SubmitFlip(0);
-    scene.FrameWait(0);
-    scene.FrameBufferSwap();
-
-    draw_terminal(&scene,g_log != NULL);
-    scene.SubmitFlip(1);
-    scene.FrameWait(1);
-    scene.FrameBufferSwap();
-
-    log_line("OK","Freely Dev screen is active.");
-    log_line("INFO","Read-only diagnostics are running.");
-    for (;;) sceKernelUsleep(1000000);
-    return 0;
+static void refresh_terminal(void) {
+    if (!g_screen_ready || !g_scene) return;
+    g_scene->SetActiveFrameBuffer(0);
+    draw_terminal(g_scene);
+    g_scene->SubmitFlip(0);
+    g_scene->FrameWait(0);
+    g_scene->FrameBufferSwap();
+    g_scene->SetActiveFrameBuffer(1);
+    draw_terminal(g_scene);
+    g_scene->SubmitFlip(1);
+    g_scene->FrameWait(1);
+    g_scene->FrameBufferSwap();
 }
 int main(void) {
-    setvbuf(stdout, NULL, _IONBF, 0);
+    setvbuf(stdout,NULL,_IONBF,0);
     g_log = fopen("/data/FREELY-DEV.log","a");
     g_report = fopen("/data/FREELY-DEV-REPORT.txt","w");
     log_line("INFO","Freely Dev starting.");
-    log_line("INFO","Target platform: PlayStation 4.");
-    log_line("INFO","Diagnostic mode: read-only.");
-    log_line("INFO","Starting system checks; unsupported queries will be marked UNKNOWN.");
+    log_line("INFO","Target: PlayStation 4.");
+    log_line("INFO","Mode: read-only.");
+    if (!g_log) log_line("WARN","Could not open /data/FREELY-DEV.log.");
+    else log_line("OK","Raw log opened: /data/FREELY-DEV.log.");
+    if (!g_report) log_line("WARN","Could not open /data/FREELY-DEV-REPORT.txt.");
+    else log_line("OK","Report opened: /data/FREELY-DEV-REPORT.txt.");
 
     Scene2D scene(SCREEN_W,SCREEN_H,4);
     if (!scene.Init(0x02000000,2)) {
@@ -151,55 +147,28 @@ int main(void) {
         if (g_report) fclose(g_report);
         for (;;) sceKernelUsleep(1000000);
     }
-    g_scene = &scene;
-    g_screen_ready = true;
+    g_scene=&scene;
+    g_screen_ready=true;
+    log_line("OK","Video output initialized.");
     refresh_terminal();
-    sceKernelUsleep(400000);
 
-    log_line("OK","PS4 video output initialized.");
+    log_line("CHECK","Checking firmware version..."); refresh_terminal();
+    log_line("UNKNOWN","Firmware query is not implemented."); refresh_terminal();
+    log_line("CHECK","Checking kernel information..."); refresh_terminal();
+    log_line("UNKNOWN","Kernel query is not implemented."); refresh_terminal();
+    log_line("CHECK","Checking console model..."); refresh_terminal();
+    log_line("UNKNOWN","Console model query is not implemented."); refresh_terminal();
+    log_line("CHECK","Checking GoldHEN status..."); refresh_terminal();
+    log_line("UNKNOWN","GoldHEN detection is not implemented."); refresh_terminal();
+    log_line("CHECK","Checking CPU and memory telemetry..."); refresh_terminal();
+    log_line("UNKNOWN","CPU and memory telemetry are not implemented."); refresh_terminal();
+    log_line("CHECK","Checking controller status..."); refresh_terminal();
+    log_line("UNKNOWN","Controller enumeration is not implemented."); refresh_terminal();
+    log_line("DONE","Diagnostic pass finished.");
+    log_line("INFO","Logs saved to /data when file access is available.");
     refresh_terminal();
-    sceKernelUsleep(400000);
-
-    log_line("CHECK","Checking firmware version...");
-    refresh_terminal();
-    log_line("UNKNOWN","Firmware query is not implemented in this build.");
-    refresh_terminal();
-    sceKernelUsleep(400000);
-
-    log_line("CHECK","Checking kernel information...");
-    refresh_terminal();
-    log_line("UNKNOWN","Kernel query is not implemented in this build.");
-    refresh_terminal();
-    sceKernelUsleep(400000);
-
-    log_line("CHECK","Checking console model...");
-    refresh_terminal();
-    log_line("UNKNOWN","Console model query is not implemented in this build.");
-    refresh_terminal();
-    sceKernelUsleep(400000);
-
-    log_line("CHECK","Checking GoldHEN status...");
-    refresh_terminal();
-    log_line("UNKNOWN","GoldHEN detection is not implemented in this build.");
-    refresh_terminal();
-    sceKernelUsleep(400000);
-
-    log_line("CHECK","Checking CPU and memory telemetry...");
-    refresh_terminal();
-    log_line("UNKNOWN","CPU and memory telemetry are not implemented in this build.");
-    refresh_terminal();
-    sceKernelUsleep(400000);
-
-    log_line("CHECK","Checking controller status...");
-    refresh_terminal();
-    log_line("UNKNOWN","Controller enumeration is not implemented in this build.");
-    refresh_terminal();
-    sceKernelUsleep(400000);
-
-    log_line("DONE","Diagnostic pass finished; see saved log and report.");
-    refresh_terminal();
-    if (g_log) { fflush(g_log); fclose(g_log); g_log = NULL; }
-    if (g_report) { fflush(g_report); fclose(g_report); g_report = NULL; }
+    if (g_log) { fflush(g_log); fclose(g_log); g_log=NULL; }
+    if (g_report) { fflush(g_report); fclose(g_report); g_report=NULL; }
     for (;;) sceKernelUsleep(1000000);
     return 0;
 }
