@@ -45,11 +45,18 @@ jobs:
               cp /workspace/.ci/create-gp4/bin/linux/create-gp4 "$OO_PS4_TOOLCHAIN/bin/linux/create-gp4"
               cp /workspace/.ci/create-fself/bin/linux/create-fself "$OO_PS4_TOOLCHAIN/bin/linux/create-fself"
               chmod +x "$OO_PS4_TOOLCHAIN/bin/linux/create-gp4" "$OO_PS4_TOOLCHAIN/bin/linux/create-fself"
+              mkdir -p sce_module
+              cp "$OO_PS4_TOOLCHAIN/samples/graphics/sce_module/libc.prx" sce_module/libc.prx
+              cp "$OO_PS4_TOOLCHAIN/samples/graphics/sce_module/libSceFios2.prx" sce_module/libSceFios2.prx
+              test -s sce_module/libc.prx
+              test -s sce_module/libSceFios2.prx
               make clean
               make
               test -s "eboot.bin"
               test -s "sce_sys/param.sfo"
               test -s "sce_sys/icon0.png"
+              test -s "sce_module/libc.prx"
+              test -s "sce_module/libSceFios2.prx"
               test -s "IV0000-FREY00001_00-FREELYDEV0000001.pkg"
             '
 
@@ -61,5 +68,7 @@ jobs:
             freely/IV0000-FREY00001_00-FREELYDEV0000001.pkg
             freely/eboot.bin
             freely/sce_sys/icon0.png
+            freely/sce_module/libc.prx
+            freely/sce_module/libSceFios2.prx
           if-no-files-found: error
           retention-days: 14
