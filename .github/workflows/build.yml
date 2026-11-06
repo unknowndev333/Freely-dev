@@ -20,6 +20,10 @@ jobs:
           mkdir -p freely/sce_sys
           curl -fL https://raw.githubusercontent.com/OpenOrbis/OpenOrbis-PS4-Toolchain/master/samples/hello_world/sce_sys/icon0.png -o freely/sce_sys/icon0.png
 
+      - name: Inspect OpenOrbis tool paths
+        run: |
+          docker run --rm --user root openorbisofficial/toolchain:v0.5.1 bash -lc 'echo "OO_PS4_TOOLCHAIN=$OO_PS4_TOOLCHAIN"; ls -la "$OO_PS4_TOOLCHAIN/bin/linux"; find "$OO_PS4_TOOLCHAIN" -maxdepth 4 -type f \( -name "*fself*" -o -name "*eboot*" -o -name "PkgTool.Core" -o -name "create-gp4" \) -print'
+
       - name: Build with official OpenOrbis container
         run: |
           docker run --rm --user root \
