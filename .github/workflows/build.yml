@@ -26,12 +26,18 @@ jobs:
           curl -fL https://github.com/OpenOrbis/create-gp4/releases/download/v1.0/binaries.tar.gz -o .ci/create-gp4/binaries.tar.gz
           tar -xzf .ci/create-gp4/binaries.tar.gz -C .ci/create-gp4
           find .ci/create-gp4 -maxdepth 4 -type f -print
+      - name: Download create-fself
+        run: |
+          mkdir -p .ci/create-fself
+          curl -fL https://github.com/OpenOrbis/create-fself/releases/download/v1.3/binaries.tar.gz -o .ci/create-fself/binaries.tar.gz
+          tar -xzf .ci/create-fself/binaries.tar.gz -C .ci/create-fself
+          chmod +x .ci/create-fself/bin/linux/create-fself
       - name: Build with official OpenOrbis container
         run: |
           docker run --rm --user root \
             -w /workspace/freely \
             -v "${{ github.workspace }}:/workspace" \
-            openorbisofficial/toolchain:latest bash -lc 'cp /workspace/.ci/create-gp4/bin/linux/create-gp4 "$OO_PS4_TOOLCHAIN/bin/linux/create-gp4" && chmod +x "$OO_PS4_TOOLCHAIN/bin/linux/create-gp4" && make'
+            openorbisofficial/toolchain:latest bash -lc 'cp /workspace/.ci/create-gp4/bin/linux/create-gp4 "$OO_PS4_TOOLCHAIN/bin/linux/create-gp4" && cp /workspace/.ci/create-fself/bin/linux/create-fself "$OO_PS4_TOOLCHAIN/bin/linux/create-fself" && chmod +x "$OO_PS4_TOOLCHAIN/bin/linux/create-gp4" "$OO_PS4_TOOLCHAIN/bin/linux/create-fself" && make'
 
       - name: Upload build output
         uses: actions/upload-artifact@v4
