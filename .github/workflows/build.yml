@@ -29,7 +29,7 @@ jobs:
           docker run --rm --user root \
             -w /workspace/freely \
             -v "${{ github.workspace }}:/workspace" \
-            openorbisofficial/toolchain:v0.5.1 make
+            openorbisofficial/toolchain:latest make
 
       - name: Upload build output
         uses: actions/upload-artifact@v4
