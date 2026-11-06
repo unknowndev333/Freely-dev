@@ -15,36 +15,50 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
-      - name: Download temporary sample icon
+      - name: Generate FREELY icon
         run: |
+          python3 -m venv .venv
+          .venv/bin/pip install --disable-pip-version-check Pillow
           mkdir -p freely/sce_sys
-          curl -fL https://raw.githubusercontent.com/OpenOrbis/OpenOrbis-PS4-Toolchain/master/samples/hello_world/sce_sys/icon0.png -o freely/sce_sys/icon0.png
+          .venv/bin/python freely/tools/make_icon.py freely/sce_sys/icon0.png
+          file freely/sce_sys/icon0.png
 
       - name: Download create-gp4
         run: |
           mkdir -p .ci/create-gp4
           curl -fL https://github.com/OpenOrbis/create-gp4/releases/download/v1.0/binaries.tar.gz -o .ci/create-gp4/binaries.tar.gz
           tar -xzf .ci/create-gp4/binaries.tar.gz -C .ci/create-gp4
-          find .ci/create-gp4 -maxdepth 4 -type f -print
+
       - name: Download create-fself
         run: |
           mkdir -p .ci/create-fself
           curl -fL https://github.com/OpenOrbis/create-fself/releases/download/v1.3/binaries.tar.gz -o .ci/create-fself/binaries.tar.gz
           tar -xzf .ci/create-fself/binaries.tar.gz -C .ci/create-fself
           chmod +x .ci/create-fself/bin/linux/create-fself
-      - name: Build with official OpenOrbis container
+
+      - name: Build and validate PS4 PKG
         run: |
           docker run --rm --user root \
             -w /workspace/freely \
             -v "${{ github.workspace }}:/workspace" \
-            openorbisofficial/toolchain:latest bash -lc 'cp /workspace/.ci/create-gp4/bin/linux/create-gp4 "$OO_PS4_TOOLCHAIN/bin/linux/create-gp4" && cp /workspace/.ci/create-fself/bin/linux/create-fself "$OO_PS4_TOOLCHAIN/bin/linux/create-fself" && chmod +x "$OO_PS4_TOOLCHAIN/bin/linux/create-gp4" "$OO_PS4_TOOLCHAIN/bin/linux/create-fself" && make'
+            openorbisofficial/toolchain:latest bash -lc '
+              cp /workspace/.ci/create-gp4/bin/linux/create-gp4 "$OO_PS4_TOOLCHAIN/bin/linux/create-gp4"
+              cp /workspace/.ci/create-fself/bin/linux/create-fself "$OO_PS4_TOOLCHAIN/bin/linux/create-fself"
+              chmod +x "$OO_PS4_TOOLCHAIN/bin/linux/create-gp4" "$OO_PS4_TOOLCHAIN/bin/linux/create-fself"
+              make
+              test -s "eboot.bin"
+              test -s "sce_sys/param.sfo"
+              test -s "sce_sys/icon0.png"
+              test -s "IV0000-FREY00001_00-FREELYDEV0000001.pkg"
+            '
 
-      - name: Upload build output
+      - name: Upload FREELY package
         uses: actions/upload-artifact@v4
         with:
-          name: FREELY-PS4-build
+          name: FREELY-PS4-PKG
           path: |
             freely/IV0000-FREY00001_00-FREELYDEV0000001.pkg
             freely/eboot.bin
+            freely/sce_sys/icon0.png
           if-no-files-found: error
           retention-days: 14
