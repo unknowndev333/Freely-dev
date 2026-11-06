@@ -15,16 +15,17 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
-      - name: Prepare OpenOrbis toolchain
-        uses: OpenOrbis/toolchain-action@main
-        with:
-          version: v0.5.1
-          command: |
-            set -e
-            cd freely
-            mkdir -p sce_sys
-            curl -fL https://raw.githubusercontent.com/OpenOrbis/OpenOrbis-PS4-Toolchain/master/samples/hello_world/sce_sys/icon0.png -o sce_sys/icon0.png
-            make
+      - name: Download temporary sample icon
+        run: |
+          mkdir -p freely/sce_sys
+          curl -fL https://raw.githubusercontent.com/OpenOrbis/OpenOrbis-PS4-Toolchain/master/samples/hello_world/sce_sys/icon0.png -o freely/sce_sys/icon0.png
+
+      - name: Build with official OpenOrbis container
+        run: |
+          docker run --rm \
+            -w /workspace/freely \
+            -v "${{ github.workspace }}:/workspace" \
+            openorbisofficial/toolchain:v0.5.1 make
 
       - name: Upload build output
         uses: actions/upload-artifact@v4
