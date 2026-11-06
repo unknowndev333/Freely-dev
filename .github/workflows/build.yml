@@ -22,7 +22,7 @@ jobs:
 
       - name: Build with official OpenOrbis container
         run: |
-          docker run --rm \
+          docker run --rm --user root \
             -w /workspace/freely \
             -v "${{ github.workspace }}:/workspace" \
             openorbisofficial/toolchain:v0.5.1 make
