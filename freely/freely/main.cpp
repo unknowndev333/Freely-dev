@@ -9,6 +9,21 @@ static const int SCREEN_W = 1920;
 static const int SCREEN_H = 1080;
 static FILE *g_log = NULL;
 static unsigned int g_log_count = 0;
+struct LogEntry { char level[12]; char message[220]; };
+static LogEntry g_entries[38];
+static unsigned int g_entry_count = 0;
+static Scene2D *g_scene = NULL;
+static bool g_screen_ready = false;
+static FILE *g_report = NULL;
+
+static RGB level_color(const char *level) {
+    if (!strcmp(level,"OK") || !strcmp(level,"FOUND") || !strcmp(level,"DONE")) return GREEN;
+    if (!strcmp(level,"WARN") || !strcmp(level,"UNKNOWN")) return YELLOW;
+    if (!strcmp(level,"ERROR") || !strcmp(level,"FAIL")) return RED;
+    if (!strcmp(level,"CHECK") || !strcmp(level,"INFO") || !strcmp(level,"SCAN")) return CYAN;
+    return MUTED;
+}
+
 
 struct RGB { uint8_t r, g, b; };
 static const RGB BG = {7, 9, 14};
@@ -71,63 +86,23 @@ static void text(Scene2D *s, int x, int y, const char *value, int scale, RGB col
 }
 static void log_line(const char *level, const char *message) {
     ++g_log_count;
-    printf("[%04u] [%s] %s\n", g_log_count, level, message);
+    unsigned int slot = (g_entry_count < 38) ? g_entry_count++ : 37;
+    if (g_entry_count == 38 && slot == 37) {
+        for (int i=0; i<37; ++i) g_entries[i] = g_entries[i+1];
+    }
+    strncpy(g_entries[slot].level, level, sizeof(g_entries[slot].level)-1);
+    g_entries[slot].level[sizeof(g_entries[slot].level)-1] = 0;
+    strncpy(g_entries[slot].message, message, sizeof(g_entries[slot].message)-1);
+    g_entries[slot].message[sizeof(g_entries[slot].message)-1] = 0;
+    printf("[%04u] [%s] %s\\n", g_log_count, level, message);
     if (g_log) {
-        fprintf(g_log, "[%04u] [%s] %s\n", g_log_count, level, message);
+        fprintf(g_log, "[%04u] [%s] %s\\n", g_log_count, level, message);
         fflush(g_log);
     }
-}
-static void terminal_line(Scene2D *s, int y, const char *value, RGB color) {
-    text(s, 76, y, value, 2, color);
-}
-static void term_prompt(Scene2D *s, int y, const char *tag, const char *msg, RGB tag_color, RGB msg_color) {
-    text(s,76,y,"[",2,DIM);
-    text(s,88,y,tag,2,tag_color);
-    text(s,148,y,"]",2,DIM);
-    text(s,166,y,msg,2,msg_color);
-}
-static void draw_terminal(Scene2D *s, bool log_ok) {
-    rect(s,0,0,SCREEN_W,SCREEN_H,{5,7,13});
-    rect(s,0,0,SCREEN_W,4,CYAN);
-    text(s,64,30,"FREELY DEV",5,CYAN);
-    text(s,64,78,"PS4 SYSTEM RECON - DEVELOPER CONSOLE",2,PURPLE);
-    text(s,1540,42,"BUILD 0.3.0",2,GREEN);
-    rect(s,64,116,1792,2,{28,43,62});
-
-    text(s,76,142,"  ______ ____  ______ ______ _  __",2,BLUE);
-    text(s,76,160," / ____// __ \\/ ____// ____// |/ /",2,BLUE);
-    text(s,76,178,"/ /_   / /_/ / __/  / __/  /    /",2,BLUE);
-    text(s,76,196,"\\__ /  \\____/____/ /_____/ /|_/ ",2,BLUE);
-    text(s,76,214,"  /_/       DEVELOPER TERMINAL",2,PURPLE);
-
-    rect(s,64,250,1792,2,{28,43,62});
-    term_prompt(s,274,"BOOT","Freely Dev diagnostic environment started",GREEN,WHITE);
-    term_prompt(s,306,"INFO","Target: PlayStation 4  |  Mode: READ ONLY",CYAN,WHITE);
-    term_prompt(s,338,"OK",log_ok?"Log file opened: /data/FREELY-DEV.log":"Screen logging active; file log unavailable",GREEN,log_ok?GREEN:YELLOW);
-    term_prompt(s,370,"SCAN","Starting system inventory...",PURPLE,WHITE);
-    term_prompt(s,418,"CHECK","Video output interface ............. ACTIVE",CYAN,GREEN);
-    term_prompt(s,450,"CHECK","Application runtime ................ ACTIVE",CYAN,GREEN);
-    term_prompt(s,482,"WAIT","Firmware information ............... NOT READ",YELLOW,YELLOW);
-    term_prompt(s,514,"WAIT","Kernel information ................. NOT READ",YELLOW,YELLOW);
-    term_prompt(s,546,"WAIT","Console model ...................... NOT READ",YELLOW,YELLOW);
-    term_prompt(s,578,"WAIT","GoldHEN status ..................... NOT VERIFIED",YELLOW,YELLOW);
-    term_prompt(s,610,"TODO","CPU / memory telemetry ............. PENDING",PURPLE,MUTED);
-    term_prompt(s,642,"TODO","Controller enumeration ............. PENDING",PURPLE,MUTED);
-    term_prompt(s,674,"TODO","System module inventory ............ PENDING",PURPLE,MUTED);
-
-    rect(s,64,720,1792,2,{28,43,62});
-    text(s,76,742,"[ INSPECTOR STATUS ]",2,CYAN);
-    text(s,76,778,"[",2,DIM); text(s,88,778,"PARTIAL",2,YELLOW); text(s,172,778,"]",2,DIM);
-    text(s,196,778,"Read-only checks only. Unknown values are never guessed.",2,WHITE);
-    text(s,76,826,"[ SAFETY ]",2,GREEN);
-    text(s,196,826,"No kernel patches, spoofing, or system modifications executed.",2,MUTED);
-    rect(s,64,882,1792,2,{28,43,62});
-    text(s,76,908,"root@freely-dev:~#",2,GREEN);
-    text(s,310,908,"waiting for next diagnostic module_",2,WHITE);
-    text(s,76,1004,"FREELY DEV  /  SYSTEM INSPECTOR  /  TERMINAL UI",2,DIM);
-    text(s,1570,1004,"PS4 HOMEbrew",2,PURPLE);
-    rect(s,64,1048,1792,3,{20,31,47});
-    rect(s,64,1048,520,3,CYAN);
+    if (g_report) {
+        fprintf(g_report, "[%04u] [%s] %s\\n", g_log_count, level, message);
+        fflush(g_report);
+    }
 }
 int main(void) {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -157,6 +132,74 @@ int main(void) {
 
     log_line("OK","Freely Dev screen is active.");
     log_line("INFO","Read-only diagnostics are running.");
+    for (;;) sceKernelUsleep(1000000);
+    return 0;
+}
+int main(void) {
+    setvbuf(stdout, NULL, _IONBF, 0);
+    g_log = fopen("/data/FREELY-DEV.log","a");
+    g_report = fopen("/data/FREELY-DEV-REPORT.txt","w");
+    log_line("INFO","Freely Dev starting.");
+    log_line("INFO","Target platform: PlayStation 4.");
+    log_line("INFO","Diagnostic mode: read-only.");
+    log_line("INFO","Starting system checks; unsupported queries will be marked UNKNOWN.");
+
+    Scene2D scene(SCREEN_W,SCREEN_H,4);
+    if (!scene.Init(0x02000000,2)) {
+        log_line("ERROR","Video output initialization failed.");
+        if (g_log) fclose(g_log);
+        if (g_report) fclose(g_report);
+        for (;;) sceKernelUsleep(1000000);
+    }
+    g_scene = &scene;
+    g_screen_ready = true;
+    refresh_terminal();
+    sceKernelUsleep(400000);
+
+    log_line("OK","PS4 video output initialized.");
+    refresh_terminal();
+    sceKernelUsleep(400000);
+
+    log_line("CHECK","Checking firmware version...");
+    refresh_terminal();
+    log_line("UNKNOWN","Firmware query is not implemented in this build.");
+    refresh_terminal();
+    sceKernelUsleep(400000);
+
+    log_line("CHECK","Checking kernel information...");
+    refresh_terminal();
+    log_line("UNKNOWN","Kernel query is not implemented in this build.");
+    refresh_terminal();
+    sceKernelUsleep(400000);
+
+    log_line("CHECK","Checking console model...");
+    refresh_terminal();
+    log_line("UNKNOWN","Console model query is not implemented in this build.");
+    refresh_terminal();
+    sceKernelUsleep(400000);
+
+    log_line("CHECK","Checking GoldHEN status...");
+    refresh_terminal();
+    log_line("UNKNOWN","GoldHEN detection is not implemented in this build.");
+    refresh_terminal();
+    sceKernelUsleep(400000);
+
+    log_line("CHECK","Checking CPU and memory telemetry...");
+    refresh_terminal();
+    log_line("UNKNOWN","CPU and memory telemetry are not implemented in this build.");
+    refresh_terminal();
+    sceKernelUsleep(400000);
+
+    log_line("CHECK","Checking controller status...");
+    refresh_terminal();
+    log_line("UNKNOWN","Controller enumeration is not implemented in this build.");
+    refresh_terminal();
+    sceKernelUsleep(400000);
+
+    log_line("DONE","Diagnostic pass finished; see saved log and report.");
+    refresh_terminal();
+    if (g_log) { fflush(g_log); fclose(g_log); g_log = NULL; }
+    if (g_report) { fflush(g_report); fclose(g_report); g_report = NULL; }
     for (;;) sceKernelUsleep(1000000);
     return 0;
 }
