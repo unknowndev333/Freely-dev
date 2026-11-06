@@ -95,9 +95,9 @@ static void log_line(const char *level, const char *message) {
     g_entries[slot].level[sizeof(g_entries[slot].level)-1] = 0;
     strncpy(g_entries[slot].message, message, sizeof(g_entries[slot].message)-1);
     g_entries[slot].message[sizeof(g_entries[slot].message)-1] = 0;
-    printf("[%04u] [%s] %s\\n", g_log_count, level, message);
-    if (g_log) { fprintf(g_log, "[%04u] [%s] %s\\n", g_log_count, level, message); fflush(g_log); }
-    if (g_report) { fprintf(g_report, "[%04u] [%s] %s\\n", g_log_count, level, message); fflush(g_report); }
+    printf("[%04u] [%s] %s\n", g_log_count, level, message);
+    if (g_log) { fprintf(g_log, "[%04u] [%s] %s\n", g_log_count, level, message); fflush(g_log); }
+    if (g_report) { fprintf(g_report, "[%04u] [%s] %s\n", g_log_count, level, message); fflush(g_report); }
 }
 static void draw_terminal(Scene2D *s) {
     rect(s,0,0,SCREEN_W,SCREEN_H,{3,5,9});
