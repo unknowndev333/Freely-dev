@@ -1,0 +1,37 @@
+name: FREELY PS4 Build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Prepare OpenOrbis toolchain
+        uses: OpenOrbis/toolchain-action@main
+        with:
+          version: v0.5.1
+          command: |
+            set -e
+            cd freely
+            mkdir -p sce_sys
+            curl -fL https://raw.githubusercontent.com/OpenOrbis/OpenOrbis-PS4-Toolchain/master/samples/hello_world/sce_sys/icon0.png -o sce_sys/icon0.png
+            make
+
+      - name: Upload build output
+        uses: actions/upload-artifact@v4
+        with:
+          name: FREELY-PS4-build
+          path: |
+            freely/IV0000-FREY00001_00-FREELYDEV0000001.pkg
+            freely/eboot.bin
+          if-no-files-found: error
+          retention-days: 14
