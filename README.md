@@ -1,22 +1,26 @@
-# FREELY — Developer Test
+# FREELY
 
-FREELY is an experimental PlayStation 4 homebrew diagnostics project.
+FREELY is an experimental PlayStation 4 homebrew diagnostics application.
 
-## Goals
+## Current prototype
 
-- Display a terminal-style startup banner and timestamped diagnostic messages.
-- Report only information that the program can actually query.
-- Save diagnostic reports in a writable application data location.
-- Mark unsupported checks as `N/A` rather than inventing results.
+- Terminal-style startup screen with the FREELY banner.
+- Timestamped diagnostic log messages.
+- Attempts to save a session log to the app's writable data location.
+- Unsupported hardware and firmware checks are marked `N/A`.
+
+## Package
+
+The GitHub Actions workflow creates a fake SELF `eboot.bin`, a PS4 `param.sfo`, a custom 512×512 RGB icon, and a fake PKG using the OpenOrbis toolchain.
+
+The workflow runs `PkgTool.Core pkg_validate` and lists the resulting package entries before uploading the artifact. A successful CI validation is not a substitute for testing installation and launch on a real GoldHEN-enabled PS4.
 
 ## Safety and scope
 
-This project is read-only. It does not spoof firmware versions, modify system settings, patch the kernel, or change console identity.
-
-## Build status
-
-This repository is an early development scaffold. A PS4 PKG must not be considered ready until the source has been built with the OpenOrbis toolchain, packaged, and tested on suitable hardware.
+This prototype is read-only. It does not spoof firmware versions, patch the kernel, or modify console settings.
 
 ## Toolchain
 
-OpenOrbis PS4 Toolchain: https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain
+- [OpenOrbis PS4 Toolchain](https://github.com/OpenOrbis/OpenOrbis-PS4-Toolchain)
+- [create-fself](https://github.com/OpenOrbis/create-fself)
+- [create-gp4](https://github.com/OpenOrbis/create-gp4)
