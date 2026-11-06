@@ -20,16 +20,18 @@ jobs:
           mkdir -p freely/sce_sys
           curl -fL https://raw.githubusercontent.com/OpenOrbis/OpenOrbis-PS4-Toolchain/master/samples/hello_world/sce_sys/icon0.png -o freely/sce_sys/icon0.png
 
-      - name: Inspect OpenOrbis tool paths
+      - name: Download create-gp4
         run: |
-          docker run --rm --user root openorbisofficial/toolchain:v0.5.1 bash -lc 'echo "OO_PS4_TOOLCHAIN=$OO_PS4_TOOLCHAIN"; ls -la "$OO_PS4_TOOLCHAIN/bin/linux"; find "$OO_PS4_TOOLCHAIN" -maxdepth 4 -type f \( -name "*fself*" -o -name "*eboot*" -o -name "PkgTool.Core" -o -name "create-gp4" \) -print'
-
+          mkdir -p .ci/create-gp4
+          curl -fL https://github.com/OpenOrbis/create-gp4/releases/download/v1.0/binaries.tar.gz -o .ci/create-gp4/binaries.tar.gz
+          tar -xzf .ci/create-gp4/binaries.tar.gz -C .ci/create-gp4
+          find .ci/create-gp4 -maxdepth 4 -type f -print
       - name: Build with official OpenOrbis container
         run: |
           docker run --rm --user root \
             -w /workspace/freely \
             -v "${{ github.workspace }}:/workspace" \
-            openorbisofficial/toolchain:latest make
+            openorbisofficial/toolchain:latest bash -lc 'find /workspace/.ci/create-gp4 -type f -name create-gp4 -exec cp {} "$OO_PS4_TOOLCHAIN/bin/linux/create-gp4" \\; && chmod +x "$OO_PS4_TOOLCHAIN/bin/linux/create-gp4" && make'
 
       - name: Upload build output
         uses: actions/upload-artifact@v4
