@@ -8,30 +8,46 @@ SIZE = 512
 SCALE = 3
 N = SIZE * SCALE
 
-# The silhouette follows the white flying-bird mark supplied for Freely Dev.
-bird = [
-    (89.4,119.2),(109.4,160.1),(144.5,195.2),(173.9,211.9),
-    (153.5,199.7),(230.3,210.7),(288.3,254.8),(306.2,279.7),
-    (305.0,296.8),(276.4,326.6),(260.1,327.5),(329.5,312.8),
-    (357.3,291.1),(393.6,242.5),(428.3,231.5),(387.1,212.3),
-    (365.4,211.5),(337.7,227.0),(316.0,249.1),(320.1,253.6),
-    (304.6,242.9),(277.6,207.4),(254.0,190.3),(142.9,153.1)
+# Smooth outline traced from the supplied white flying-bird mark.
+outline = [
+    (89.4,119.2),(121.3,175.2),(175.2,212.7),(127.4,200.5),
+    (149.4,229.9),(172.7,246.6),(211.1,261.3),(182.9,261.7),
+    (226.6,283.8),(258.9,287.0),(199.7,312.8),(118.0,332.4),
+    (161.7,352.8),(194.8,355.6),(234.8,331.9),(323.8,316.0),
+    (355.2,293.6),(394.0,242.5),(429.1,231.9),(389.1,212.7),
+    (367.9,210.7),(345.4,220.5),(313.6,250.3),(281.7,211.1),
+    (256.0,191.1),(142.5,152.7)
 ]
-points = [(int(x*SCALE), int(y*SCALE)) for x,y in bird]
 
-base = Image.new("RGBA", (N,N), (0,0,0,255))
-draw = ImageDraw.Draw(base)
-draw.rounded_rectangle((32*SCALE,32*SCALE,480*SCALE,480*SCALE),
-                       radius=104*SCALE, fill=(3,3,5,255))
+# Catmull-Rom interpolation keeps the original organic silhouette smooth.
+points = []
+count = len(outline)
+for i in range(count):
+    p0, p1 = outline[(i-1)%count], outline[i]
+    p2, p3 = outline[(i+1)%count], outline[(i+2)%count]
+    for step in range(12):
+        t = step / 12.0
+        t2, t3 = t*t, t*t*t
+        x = 0.5*((2*p1[0])+(-p0[0]+p2[0])*t+(2*p0[0]-5*p1[0]+4*p2[0]-p3[0])*t2+(-p0[0]+3*p1[0]-3*p2[0]+p3[0])*t3)
+        y = 0.5*((2*p1[1])+(-p0[1]+p2[1])*t+(2*p0[1]-5*p1[1]+4*p2[1]-p3[1])*t2+(-p0[1]+3*p1[1]-3*p2[1]+p3[1])*t3)
+        points.append((int(x*SCALE), int(y*SCALE)))
+
+base = Image.new("RGBA",(N,N),(0,0,0,255))
+ImageDraw.Draw(base).rounded_rectangle(
+    (32*SCALE,32*SCALE,480*SCALE,480*SCALE),
+    radius=104*SCALE, fill=(3,3,5,255)
+)
 glow = Image.new("RGBA",(N,N),(0,0,0,0))
-ImageDraw.Draw(glow).polygon(points, fill=(255,255,255,100))
+ImageDraw.Draw(glow).polygon(points,fill=(255,255,255,90))
 glow = glow.filter(ImageFilter.GaussianBlur(15*SCALE))
 base = Image.alpha_composite(base,glow)
 ImageDraw.Draw(base).polygon(points,fill=(250,250,253,255))
-icon = base.convert("RGB").resize((SIZE,SIZE),Image.Resampling.LANCZOS)
+
 output = Path(sys.argv[1] if len(sys.argv)>1 else "sce_sys/icon0.png")
 output.parent.mkdir(parents=True,exist_ok=True)
-icon.save(output,format="PNG",optimize=True)
+base.convert("RGB").resize((SIZE,SIZE),Image.Resampling.LANCZOS).save(
+    output,format="PNG",optimize=True
+)
 check=Image.open(output)
 if check.size!=(512,512) or check.mode!="RGB":
     raise SystemExit("icon0.png must be 512x512 opaque RGB")
