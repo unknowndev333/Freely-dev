@@ -73,62 +73,34 @@ static void log_line(const char *level, const char *message) {
         fflush(g_log);
     }
 }
-static void panel(Scene2D *s, int x, int y, int w, int h, const char *heading) {
-    rect(s,x,y,w,h,PANEL);
-    rect(s,x,y,w,3,PANEL2);
-    text(s,x+28,y+24,heading,3,MUTED);
+static void terminal_line(Scene2D *s, int y, const char *value, RGB color) {
+    text(s, 76, y, value, 3, color);
 }
-static void draw_screen(Scene2D *s, bool log_ok) {
+static void draw_terminal(Scene2D *s, bool log_ok) {
     rect(s,0,0,SCREEN_W,SCREEN_H,BG);
-    rect(s,0,0,SCREEN_W,7,GREEN);
-    text(s,92,72,"FREELY DEV",8,WHITE);
-    text(s,96,154,"PLAYSTATION 4  /  DEVELOPER DIAGNOSTICS",3,MUTED);
-    rect(s,1510,82,310,76,PANEL);
-    rect(s,1534,108,14,14,GREEN);
-    text(s,1564,103,"RUNNING",3,GREEN);
-    rect(s,92,220,1736,2,PANEL2);
-
-    panel(s,92,270,540,190,"SYSTEM");
-    text(s,124,340,"PLATFORM",3,MUTED);
-    text(s,124,385,"PLAYSTATION 4",4,WHITE);
-    text(s,124,430,"RUNTIME ACTIVE",3,GREEN);
-
-    panel(s,660,270,540,190,"SECURITY");
-    text(s,692,340,"GOLDHEN",3,MUTED);
-    text(s,692,385,"NOT DETECTED",4,YELLOW);
-    text(s,692,430,"NO PATCHES APPLIED",3,GREEN);
-
-    panel(s,1228,270,600,190,"FIRMWARE");
-    text(s,1260,340,"FIRMWARE VERSION",3,MUTED);
-    text(s,1260,385,"NOT AVAILABLE",4,YELLOW);
-    text(s,1260,430,"READ ONLY",3,GREEN);
-
-    panel(s,92,490,840,360,"DIAGNOSTIC CHECKS");
-    text(s,128,560,"VIDEO OUTPUT",3,WHITE);
-    text(s,720,560,"INITIALIZED",3,GREEN);
-    rect(s,128,602,768,2,PANEL2);
-    text(s,128,630,"LOCAL LOG FILE",3,WHITE);
-    text(s,720,630,log_ok ? "WRITABLE" : "UNAVAILABLE",3,log_ok?GREEN:YELLOW);
-    rect(s,128,672,768,2,PANEL2);
-    text(s,128,700,"CPU / MEMORY TELEMETRY",3,WHITE);
-    text(s,720,700,"NOT IMPLEMENTED",3,YELLOW);
-    rect(s,128,742,768,2,PANEL2);
-    text(s,128,770,"CONTROLLER STATUS",3,WHITE);
-    text(s,720,770,"NOT IMPLEMENTED",3,YELLOW);
-
-    panel(s,960,490,868,360,"SESSION LOG");
-    text(s,996,560,"[OK] VIDEO OUTPUT INITIALIZED",3,GREEN);
-    text(s,996,615,log_ok?"[OK] LOG FILE OPENED":"[WARN] FILE LOGGING OFF",3,log_ok?GREEN:YELLOW);
-    text(s,996,670,"[INFO] DIAGNOSTIC SESSION STARTED",3,WHITE);
-    text(s,996,725,"[N/A] FIRMWARE / GOLDHEN API",3,MUTED);
-    text(s,996,780,"[INFO] READ ONLY - NO SYSTEM CHANGES",3,WHITE);
-
-    rect(s,92,900,1736,2,PANEL2);
-    text(s,96,944,"FREELY DEV  /  BUILD 0.2.0",3,MUTED);
-    text(s,96,1000,"DIAGNOSTIC MODE ACTIVE",3,GREEN);
-    text(s,1450,1000,"SAFE  -  READ ONLY",3,MUTED);
+    rect(s,0,0,SCREEN_W,5,GREEN);
+    text(s,64,38,"FREELY DEV - SYSTEM INSPECTOR",5,GREEN);
+    text(s,64,92,"PS4 DEVELOPER TERMINAL / READ ONLY",2,MUTED);
+    rect(s,64,142,1792,2,PANEL2);
+    terminal_line(s,184,"> FREELY DEV INSPECTOR BOOT",GREEN);
+    terminal_line(s,232,"> PLATFORM: PLAYSTATION 4",WHITE);
+    terminal_line(s,280,"> RUNTIME: ACTIVE",GREEN);
+    terminal_line(s,328,log_ok?"> LOG: /DATA/FREELY-DEV.LOG WRITABLE":"> LOG: FILE LOGGING UNAVAILABLE",log_ok?GREEN:YELLOW);
+    terminal_line(s,400,"> SYSTEM ENUMERATION",BLUE);
+    terminal_line(s,448,"> FIRMWARE VERSION: NOT READ",YELLOW);
+    terminal_line(s,496,"> KERNEL VERSION: NOT READ",YELLOW);
+    terminal_line(s,544,"> CONSOLE MODEL: NOT READ",YELLOW);
+    terminal_line(s,592,"> GOLDHEN STATUS: NOT VERIFIED",YELLOW);
+    terminal_line(s,640,"> CPU TELEMETRY: NOT IMPLEMENTED",MUTED);
+    terminal_line(s,688,"> MEMORY TELEMETRY: NOT IMPLEMENTED",MUTED);
+    terminal_line(s,736,"> CONTROLLER STATUS: NOT IMPLEMENTED",MUTED);
+    rect(s,64,792,1792,2,PANEL2);
+    terminal_line(s,832,"> SCAN STATUS: PARTIAL",YELLOW);
+    terminal_line(s,880,"> NEXT: VERIFIED READ-ONLY SYSTEM QUERIES",WHITE);
+    terminal_line(s,928,"> NO SPOOFING OR SYSTEM CHANGES APPLIED",GREEN);
+    text(s,64,1010,"FREELY DEV 0.3.0 - TERMINAL MODE",2,MUTED);
+    rect(s,64,1054,18,4,GREEN);
 }
-
 int main(void) {
     setvbuf(stdout, NULL, _IONBF, 0);
     log_line("INFO","Freely Dev boot sequence started.");
@@ -145,12 +117,12 @@ int main(void) {
     }
 
     scene.SetActiveFrameBuffer(0);
-    draw_screen(&scene,g_log != NULL);
+    draw_terminal(&scene,g_log != NULL);
     scene.SubmitFlip(0);
     scene.FrameWait(0);
     scene.FrameBufferSwap();
 
-    draw_screen(&scene,g_log != NULL);
+    draw_terminal(&scene,g_log != NULL);
     scene.SubmitFlip(1);
     scene.FrameWait(1);
     scene.FrameBufferSwap();
