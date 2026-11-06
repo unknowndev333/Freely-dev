@@ -27,7 +27,7 @@ $(OBJECT): $(SOURCE) | $(INTDIR)
 
 eboot.bin: $(OBJECT)
 	$(LD) $(OBJECT) -o $(INTDIR)/freely.elf $(LDFLAGS)
-	$(TOOLCHAIN)/bin/$(CDIR)/create-eboot -in=$(INTDIR)/freely.elf -out=$(INTDIR)/freely.oelf --eboot "eboot.bin" --paid 0x3800000000000011
+	$(TOOLCHAIN)/bin/$(CDIR)/create-eboot -in=$(INTDIR)/freely.elf -out=eboot.bin --paid 0x3800000000000011
 
 sce_sys/param.sfo:
 	mkdir -p sce_sys
