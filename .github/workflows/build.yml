@@ -31,7 +31,7 @@ jobs:
           docker run --rm --user root \
             -w /workspace/freely \
             -v "${{ github.workspace }}:/workspace" \
-            openorbisofficial/toolchain:latest bash -lc 'find /workspace/.ci/create-gp4 -type f -name create-gp4 -exec cp {} "$OO_PS4_TOOLCHAIN/bin/linux/create-gp4" \\; && chmod +x "$OO_PS4_TOOLCHAIN/bin/linux/create-gp4" && make'
+            openorbisofficial/toolchain:latest bash -lc 'cp /workspace/.ci/create-gp4/bin/linux/create-gp4 "$OO_PS4_TOOLCHAIN/bin/linux/create-gp4" && chmod +x "$OO_PS4_TOOLCHAIN/bin/linux/create-gp4" && make'
 
       - name: Upload build output
         uses: actions/upload-artifact@v4
