@@ -18,7 +18,11 @@ static const RGB WHITE = {239, 243, 250};
 static const RGB MUTED = {135, 148, 166};
 static const RGB GREEN = {102, 235, 176};
 static const RGB YELLOW = {255, 204, 102};
-static const RGB BLUE = {110, 168, 255};
+static const RGB BLUE = {80, 190, 255};
+static const RGB CYAN = {70, 235, 245};
+static const RGB PURPLE = {190, 130, 255};
+static const RGB RED = {255, 105, 125};
+static const RGB DIM = {65, 82, 105};
 
 static const char *FONT_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:-./_?";
 static const uint8_t FONT[][5] = {
@@ -74,32 +78,56 @@ static void log_line(const char *level, const char *message) {
     }
 }
 static void terminal_line(Scene2D *s, int y, const char *value, RGB color) {
-    text(s, 76, y, value, 3, color);
+    text(s, 76, y, value, 2, color);
+}
+static void term_prompt(Scene2D *s, int y, const char *tag, const char *msg, RGB tag_color, RGB msg_color) {
+    text(s,76,y,"[",2,DIM);
+    text(s,88,y,tag,2,tag_color);
+    text(s,148,y,"]",2,DIM);
+    text(s,166,y,msg,2,msg_color);
 }
 static void draw_terminal(Scene2D *s, bool log_ok) {
-    rect(s,0,0,SCREEN_W,SCREEN_H,BG);
-    rect(s,0,0,SCREEN_W,5,GREEN);
-    text(s,64,38,"FREELY DEV - SYSTEM INSPECTOR",5,GREEN);
-    text(s,64,92,"PS4 DEVELOPER TERMINAL / READ ONLY",2,MUTED);
-    rect(s,64,142,1792,2,PANEL2);
-    terminal_line(s,184,"> FREELY DEV INSPECTOR BOOT",GREEN);
-    terminal_line(s,232,"> PLATFORM: PLAYSTATION 4",WHITE);
-    terminal_line(s,280,"> RUNTIME: ACTIVE",GREEN);
-    terminal_line(s,328,log_ok?"> LOG: /DATA/FREELY-DEV.LOG WRITABLE":"> LOG: FILE LOGGING UNAVAILABLE",log_ok?GREEN:YELLOW);
-    terminal_line(s,400,"> SYSTEM ENUMERATION",BLUE);
-    terminal_line(s,448,"> FIRMWARE VERSION: NOT READ",YELLOW);
-    terminal_line(s,496,"> KERNEL VERSION: NOT READ",YELLOW);
-    terminal_line(s,544,"> CONSOLE MODEL: NOT READ",YELLOW);
-    terminal_line(s,592,"> GOLDHEN STATUS: NOT VERIFIED",YELLOW);
-    terminal_line(s,640,"> CPU TELEMETRY: NOT IMPLEMENTED",MUTED);
-    terminal_line(s,688,"> MEMORY TELEMETRY: NOT IMPLEMENTED",MUTED);
-    terminal_line(s,736,"> CONTROLLER STATUS: NOT IMPLEMENTED",MUTED);
-    rect(s,64,792,1792,2,PANEL2);
-    terminal_line(s,832,"> SCAN STATUS: PARTIAL",YELLOW);
-    terminal_line(s,880,"> NEXT: VERIFIED READ-ONLY SYSTEM QUERIES",WHITE);
-    terminal_line(s,928,"> NO SPOOFING OR SYSTEM CHANGES APPLIED",GREEN);
-    text(s,64,1010,"FREELY DEV 0.3.0 - TERMINAL MODE",2,MUTED);
-    rect(s,64,1054,18,4,GREEN);
+    rect(s,0,0,SCREEN_W,SCREEN_H,{5,7,13});
+    rect(s,0,0,SCREEN_W,4,CYAN);
+    text(s,64,30,"FREELY DEV",5,CYAN);
+    text(s,64,78,"PS4 SYSTEM RECON - DEVELOPER CONSOLE",2,PURPLE);
+    text(s,1540,42,"BUILD 0.3.0",2,GREEN);
+    rect(s,64,116,1792,2,{28,43,62});
+
+    text(s,76,142,"  ______ ____  ______ ______ _  __",2,BLUE);
+    text(s,76,160," / ____// __ \\/ ____// ____// |/ /",2,BLUE);
+    text(s,76,178,"/ /_   / /_/ / __/  / __/  /    /",2,BLUE);
+    text(s,76,196,"\\__ /  \\____/____/ /_____/ /|_/ ",2,BLUE);
+    text(s,76,214,"  /_/       DEVELOPER TERMINAL",2,PURPLE);
+
+    rect(s,64,250,1792,2,{28,43,62});
+    term_prompt(s,274,"BOOT","Freely Dev diagnostic environment started",GREEN,WHITE);
+    term_prompt(s,306,"INFO","Target: PlayStation 4  |  Mode: READ ONLY",CYAN,WHITE);
+    term_prompt(s,338,"OK",log_ok?"Log file opened: /data/FREELY-DEV.log":"Screen logging active; file log unavailable",GREEN,log_ok?GREEN:YELLOW);
+    term_prompt(s,370,"SCAN","Starting system inventory...",PURPLE,WHITE);
+    term_prompt(s,418,"CHECK","Video output interface ............. ACTIVE",CYAN,GREEN);
+    term_prompt(s,450,"CHECK","Application runtime ................ ACTIVE",CYAN,GREEN);
+    term_prompt(s,482,"WAIT","Firmware information ............... NOT READ",YELLOW,YELLOW);
+    term_prompt(s,514,"WAIT","Kernel information ................. NOT READ",YELLOW,YELLOW);
+    term_prompt(s,546,"WAIT","Console model ...................... NOT READ",YELLOW,YELLOW);
+    term_prompt(s,578,"WAIT","GoldHEN status ..................... NOT VERIFIED",YELLOW,YELLOW);
+    term_prompt(s,610,"TODO","CPU / memory telemetry ............. PENDING",PURPLE,MUTED);
+    term_prompt(s,642,"TODO","Controller enumeration ............. PENDING",PURPLE,MUTED);
+    term_prompt(s,674,"TODO","System module inventory ............ PENDING",PURPLE,MUTED);
+
+    rect(s,64,720,1792,2,{28,43,62});
+    text(s,76,742,"[ INSPECTOR STATUS ]",2,CYAN);
+    text(s,76,778,"[",2,DIM); text(s,88,778,"PARTIAL",2,YELLOW); text(s,172,778,"]",2,DIM);
+    text(s,196,778,"Read-only checks only. Unknown values are never guessed.",2,WHITE);
+    text(s,76,826,"[ SAFETY ]",2,GREEN);
+    text(s,196,826,"No kernel patches, spoofing, or system modifications executed.",2,MUTED);
+    rect(s,64,882,1792,2,{28,43,62});
+    text(s,76,908,"root@freely-dev:~#",2,GREEN);
+    text(s,310,908,"waiting for next diagnostic module_",2,WHITE);
+    text(s,76,1004,"FREELY DEV  /  SYSTEM INSPECTOR  /  TERMINAL UI",2,DIM);
+    text(s,1570,1004,"PS4 HOMEbrew",2,PURPLE);
+    rect(s,64,1048,1792,3,{20,31,47});
+    rect(s,64,1048,520,3,CYAN);
 }
 int main(void) {
     setvbuf(stdout, NULL, _IONBF, 0);
