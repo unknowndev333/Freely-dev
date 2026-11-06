@@ -54,7 +54,7 @@ sce_sys/param.sfo:
 sce_sys/icon0.png: tools/make_icon.py
 	python3 tools/make_icon.py $@
 
-pkg.gp4: eboot.bin sce_sys/param.sfo sce_sys/icon0.png sce_module/libc.prx sce_module/libSceFios2.prx
+pkg.gp4: eboot.bin sce_sys/param.sfo sce_sys/icon0.png
 	$(GP4TOOL) -out=$@ --content-id=$(CONTENT_ID) --files "$^"
 
 $(CONTENT_ID).pkg: pkg.gp4
