@@ -3,6 +3,9 @@
 #include <string.h>
 #include <ctype.h>
 #include <orbis/libkernel.h>
+#include <sys/utsname.h>
+#include <sys/statvfs.h>
+#include <unistd.h>
 #include "graphics.h"
 
 static const int SCREEN_W = 1920;
@@ -128,16 +131,71 @@ static void refresh_terminal(void) {
     g_scene->FrameWait(1);
     g_scene->FrameBufferSwap();
 }
+static void run_read_only_checks(void) {
+    struct utsname system_info;
+    log_line("CHECK","Querying OS runtime information...");
+    refresh_terminal();
+    if (uname(&system_info)==0) {
+        char line[220];
+        snprintf(line,sizeof(line),"OS: %.50s | RELEASE: %.50s",system_info.sysname,system_info.release);
+        log_line("FOUND",line);
+        snprintf(line,sizeof(line),"MACHINE: %.80s",system_info.machine);
+        log_line("FOUND",line);
+    } else {
+        log_line("WARN","uname() could not provide runtime information.");
+    }
+    refresh_terminal();
+
+    struct statvfs storage;
+    log_line("CHECK","Inspecting writable data filesystem...");
+    refresh_terminal();
+    if (statvfs("/data",&storage)==0) {
+        unsigned long long free_bytes=(unsigned long long)storage.f_bavail*(unsigned long long)storage.f_frsize;
+        char line[220];
+        snprintf(line,sizeof(line),"/data available space: %llu bytes",free_bytes);
+        log_line("FOUND",line);
+    } else {
+        log_line("WARN","Could not query /data filesystem statistics.");
+    }
+    refresh_terminal();
+
+    log_line("CHECK","Testing log persistence with write/read verification...");
+    refresh_terminal();
+    const char *test_path="/data/FREELY-DEV-WRITE-TEST.tmp";
+    const char *marker="FREELY_DEV_STORAGE_TEST_OK";
+    FILE *test=fopen(test_path,"w");
+    if (!test) {
+        log_line("FAIL","Could not create a test file in /data.");
+    } else {
+        fputs(marker,test);
+        int write_ok=(fflush(test)==0);
+        fclose(test);
+        char readback[64]={0};
+        test=fopen(test_path,"r");
+        if (test) {
+            size_t n=fread(readback,1,sizeof(readback)-1,test);
+            fclose(test);
+            if (write_ok && n==strlen(marker) && strcmp(readback,marker)==0)
+                log_line("PASS","/data write and read-back verification succeeded.");
+            else
+                log_line("FAIL","/data test file did not match written contents.");
+        } else {
+            log_line("FAIL","Test file was written but could not be reopened.");
+        }
+        remove(test_path);
+    }
+    refresh_terminal();
+}
+
 int main(void) {
     setvbuf(stdout,NULL,_IONBF,0);
-    g_log = fopen("/data/FREELY-DEV.log","a");
-    g_report = fopen("/data/FREELY-DEV-REPORT.txt","w");
+    g_log=fopen("/data/FREELY-DEV.log","a");
+    g_report=fopen("/data/FREELY-DEV-REPORT.txt","w");
     log_line("INFO","Freely Dev starting.");
-    log_line("INFO","Target: PlayStation 4.");
-    log_line("INFO","Mode: read-only.");
-    if (!g_log) log_line("WARN","Could not open /data/FREELY-DEV.log.");
+    log_line("INFO","Mode: read-only diagnostics.");
+    if (!g_log) log_line("FAIL","Could not open /data/FREELY-DEV.log.");
     else log_line("OK","Raw log opened: /data/FREELY-DEV.log.");
-    if (!g_report) log_line("WARN","Could not open /data/FREELY-DEV-REPORT.txt.");
+    if (!g_report) log_line("FAIL","Could not open /data/FREELY-DEV-REPORT.txt.");
     else log_line("OK","Report opened: /data/FREELY-DEV-REPORT.txt.");
 
     Scene2D scene(SCREEN_W,SCREEN_H,4);
@@ -152,21 +210,15 @@ int main(void) {
     log_line("OK","Video output initialized.");
     refresh_terminal();
 
-    log_line("CHECK","Checking firmware version..."); refresh_terminal();
-    log_line("UNKNOWN","Firmware query is not implemented."); refresh_terminal();
-    log_line("CHECK","Checking kernel information..."); refresh_terminal();
-    log_line("UNKNOWN","Kernel query is not implemented."); refresh_terminal();
-    log_line("CHECK","Checking console model..."); refresh_terminal();
-    log_line("UNKNOWN","Console model query is not implemented."); refresh_terminal();
-    log_line("CHECK","Checking GoldHEN status..."); refresh_terminal();
-    log_line("UNKNOWN","GoldHEN detection is not implemented."); refresh_terminal();
-    log_line("CHECK","Checking CPU and memory telemetry..."); refresh_terminal();
-    log_line("UNKNOWN","CPU and memory telemetry are not implemented."); refresh_terminal();
-    log_line("CHECK","Checking controller status..."); refresh_terminal();
-    log_line("UNKNOWN","Controller enumeration is not implemented."); refresh_terminal();
-    log_line("DONE","Diagnostic pass finished.");
-    log_line("INFO","Logs saved to /data when file access is available.");
+    run_read_only_checks();
+
+    log_line("UNKNOWN","PS4 firmware version query is not implemented.");
+    log_line("UNKNOWN","Console model query is not implemented.");
+    log_line("UNKNOWN","GoldHEN detection is not implemented.");
+    log_line("UNKNOWN","Controller enumeration is not implemented.");
+    log_line("DONE","Implemented read-only checks completed.");
     refresh_terminal();
+
     if (g_log) { fflush(g_log); fclose(g_log); g_log=NULL; }
     if (g_report) { fflush(g_report); fclose(g_report); g_report=NULL; }
     for (;;) sceKernelUsleep(1000000);
