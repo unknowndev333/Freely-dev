@@ -134,19 +134,7 @@ static void run_read_only_checks(void) {
     log_line("SCAN","Starting full supported read-only scan.");
     refresh_terminal();
 
-    log_line("CHECK","Reading PS4 system software version...");
-    struct FreelySwVersion { size_t Size; char VersionString[0x1C]; uint32_t Version; };
-    FreelySwVersion sw;
-    memset(&sw,0,sizeof(sw));
-    sw.Size=sizeof(sw);
-    int sw_result=sceKernelGetSystemSwVersion((void *)&sw);
-    if (sw_result==0 && sw.Version!=0) {
-        snprintf(line,sizeof(line),"Firmware: %s | raw=0x%08X",sw.VersionString,sw.Version);
-        log_line("FOUND",line);
-    } else {
-        snprintf(line,sizeof(line),"Firmware query failed: result=%d",sw_result);
-        log_line("UNKNOWN",line);
-    }
+    log_line("UNKNOWN","Firmware version query is unavailable: this OpenOrbis SDK exposes no verified callable signature.");
     refresh_terminal();
 
     log_line("CHECK","Reading CPU frequency...");
