@@ -3,10 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <orbis/libkernel.h>
-#include <sys/utsname.h>
-#include <sys/statvfs.h>
 #include <unistd.h>
-#include <errno.h>
 #include "graphics.h"
 
 static const int SCREEN_W = 1920;
@@ -133,40 +130,29 @@ static void refresh_terminal(void) {
     g_scene->FrameBufferSwap();
 }
 static void run_read_only_checks(void) {
-    struct utsname system_info;
-    log_line("CHECK","Querying OS runtime information...");
+    log_line("CHECK","Querying PS4 CPU frequency through libkernel...");
     refresh_terminal();
-    errno=0;
-    int uname_result=uname(&system_info);
-    int uname_error=errno;
-    if (uname_result==0) {
+    int cpu_frequency=sceKernelGetCpuFrequency();
+    if (cpu_frequency>0) {
         char line[220];
-        snprintf(line,sizeof(line),"OS: %.50s | RELEASE: %.50s",system_info.sysname,system_info.release);
-        log_line("FOUND",line);
-        snprintf(line,sizeof(line),"MACHINE: %.80s",system_info.machine);
+        snprintf(line,sizeof(line),"CPU frequency API returned: %d (raw units)",cpu_frequency);
         log_line("FOUND",line);
     } else {
         char line[220];
-        snprintf(line,sizeof(line),"uname() failed: return=%d errno=%d",uname_result,uname_error);
+        snprintf(line,sizeof(line),"CPU frequency query returned: %d",cpu_frequency);
         log_line("WARN",line);
     }
     refresh_terminal();
 
-    struct statvfs storage;
-    log_line("CHECK","Inspecting writable data filesystem...");
+    log_line("CHECK","Querying direct-memory capacity through libkernel...");
     refresh_terminal();
-    errno=0;
-    int stat_result=statvfs("/data",&storage);
-    int stat_error=errno;
-    if (stat_result==0) {
-        unsigned long long free_bytes=(unsigned long long)storage.f_bavail*(unsigned long long)storage.f_frsize;
+    size_t direct_memory=sceKernelGetDirectMemorySize();
+    if (direct_memory>0) {
         char line[220];
-        snprintf(line,sizeof(line),"/data available space: %llu bytes",free_bytes);
+        snprintf(line,sizeof(line),"Direct-memory capacity: %llu bytes",(unsigned long long)direct_memory);
         log_line("FOUND",line);
     } else {
-        char line[220];
-        snprintf(line,sizeof(line),"statvfs(/data) failed: return=%d errno=%d",stat_result,stat_error);
-        log_line("WARN",line);
+        log_line("WARN","Direct-memory capacity query returned zero.");
     }
     refresh_terminal();
 
