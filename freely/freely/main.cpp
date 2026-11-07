@@ -135,9 +135,11 @@ static void run_read_only_checks(void) {
     refresh_terminal();
 
     log_line("CHECK","Reading PS4 system software version...");
-    OrbisKernelSwVersion sw;
+    struct FreelySwVersion { size_t Size; char VersionString[0x1C]; uint32_t Version; };
+    FreelySwVersion sw;
     memset(&sw,0,sizeof(sw));
-    int sw_result=sceKernelGetSystemSwVersion(&sw);
+    sw.Size=sizeof(sw);
+    int sw_result=sceKernelGetSystemSwVersion((void *)&sw);
     if (sw_result==0 && sw.Version!=0) {
         snprintf(line,sizeof(line),"Firmware: %s | raw=0x%08X",sw.VersionString,sw.Version);
         log_line("FOUND",line);
@@ -166,16 +168,7 @@ static void run_read_only_checks(void) {
     } else log_line("WARN","Direct-memory capacity returned zero.");
     refresh_terminal();
 
-    log_line("CHECK","Reading available flexible memory...");
-    size_t flexible_memory=0;
-    int flexible_result=sceKernelAvailableFlexibleMemorySize(&flexible_memory);
-    if (flexible_result==0) {
-        snprintf(line,sizeof(line),"Available flexible memory: %llu bytes",(unsigned long long)flexible_memory);
-        log_line("FOUND",line);
-    } else {
-        snprintf(line,sizeof(line),"Flexible-memory query failed: result=%d",flexible_result);
-        log_line("WARN",line);
-    }
+    log_line("UNKNOWN","Flexible-memory capacity is not queried: SDK exposes a size-parameter API, not a verified output query.");
     refresh_terminal();
 
     log_line("CHECK","Reading console platform flags...");
