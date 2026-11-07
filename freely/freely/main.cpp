@@ -6,6 +6,7 @@
 #include <sys/utsname.h>
 #include <sys/statvfs.h>
 #include <unistd.h>
+#include <errno.h>
 #include "graphics.h"
 
 static const int SCREEN_W = 1920;
@@ -135,27 +136,37 @@ static void run_read_only_checks(void) {
     struct utsname system_info;
     log_line("CHECK","Querying OS runtime information...");
     refresh_terminal();
-    if (uname(&system_info)==0) {
+    errno=0;
+    int uname_result=uname(&system_info);
+    int uname_error=errno;
+    if (uname_result==0) {
         char line[220];
         snprintf(line,sizeof(line),"OS: %.50s | RELEASE: %.50s",system_info.sysname,system_info.release);
         log_line("FOUND",line);
         snprintf(line,sizeof(line),"MACHINE: %.80s",system_info.machine);
         log_line("FOUND",line);
     } else {
-        log_line("WARN","uname() could not provide runtime information.");
+        char line[220];
+        snprintf(line,sizeof(line),"uname() failed: return=%d errno=%d",uname_result,uname_error);
+        log_line("WARN",line);
     }
     refresh_terminal();
 
     struct statvfs storage;
     log_line("CHECK","Inspecting writable data filesystem...");
     refresh_terminal();
-    if (statvfs("/data",&storage)==0) {
+    errno=0;
+    int stat_result=statvfs("/data",&storage);
+    int stat_error=errno;
+    if (stat_result==0) {
         unsigned long long free_bytes=(unsigned long long)storage.f_bavail*(unsigned long long)storage.f_frsize;
         char line[220];
         snprintf(line,sizeof(line),"/data available space: %llu bytes",free_bytes);
         log_line("FOUND",line);
     } else {
-        log_line("WARN","Could not query /data filesystem statistics.");
+        char line[220];
+        snprintf(line,sizeof(line),"statvfs(/data) failed: return=%d errno=%d",stat_result,stat_error);
+        log_line("WARN",line);
     }
     refresh_terminal();
 
